@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import {
+import client, {
   COLLECTION_ID_MESSAGE,
   DATABASE_ID,
   database,
 } from "./services/appWriteConfig";
 import { ID, Query } from "appwrite";
 import { Spinner } from "./components/Spinner";
-import { motion } from "framer-motion";
-
+import { format } from "date-fns";
+import { Trash2 } from "lucide-react";
 export interface DataBaseProps {
   body: string;
   userId: string;
@@ -41,7 +41,6 @@ function App() {
     const payload = {
       body: messageBody,
     };
-    console.log(payload);
 
     await database
       .createDocument(DATABASE_ID, COLLECTION_ID_MESSAGE, ID.unique(), payload)
@@ -53,19 +52,27 @@ function App() {
   };
 
   const deleteMessage = async (message_id: string) => {
-    setDeleteIsLoading(true);
-    const response = await database
-      .deleteDocument(DATABASE_ID, COLLECTION_ID_MESSAGE, message_id)
-      .then((res) => res)
-      .finally(() => {
-        setDeleteIsLoading(false);
-      });
+    const response = await database.deleteDocument(
+      DATABASE_ID,
+      COLLECTION_ID_MESSAGE,
+      message_id
+    );
 
-    console.log(response);
+    setMessage((prevState) =>
+      message.filter((message) => message.$id !== message_id)
+    );
   };
 
   useEffect(() => {
     getMessage();
+
+    // Subscribe to files channel
+    // client.subscribe(
+    //   `databases.${DATABASE_ID}.collections.${COLLECTION_ID_MESSAGE}.documents`,
+    //   (response) => {
+    //     console.log("real time", response);
+    //   }
+    // );
   }, [message]);
 
   return (
@@ -102,27 +109,16 @@ function App() {
             return (
               <div key={message.$id} className="flex flex-col gap-4 mb-10">
                 <div>
-                  <p>{message.$createdAt}</p>
+                  <p>{format(message.$createdAt, "dd/MM/yyyy HH:mm")}</p>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="bg-pink-600 rounded-3xl px-4 py-2">
                     {message.body}
                   </span>
 
-                  <motion.div
-                    onClick={() => deleteMessage(message.$id)}
-                    className="cursor-pointer w-6 h-6 bg-pink-600 rounded-full flex items-center justify-center"
-                    animate={
-                      deleteIsLoading ? { y: [-10, 0, -10] } : { y: [0, 0, 0] }
-                    }
-                    transition={{
-                      duration: 1,
-                      repeat: deleteIsLoading ? Infinity : 0,
-                      ease: "linear",
-                    }}
-                  >
-                    X
-                  </motion.div>
+                  <button onClick={() => deleteMessage(message.$id)}>
+                    <Trash2 className="text-white w-6 h-6 transition duration-150 hover:text-pink-600 " />
+                  </button>
 
                   {/* <motion.div
                     transition={{ ease: "linear", duration: 0.8 }}
