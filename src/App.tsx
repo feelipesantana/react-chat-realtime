@@ -6,6 +6,7 @@ import {
 } from "./services/appWriteConfig";
 import { ID, Query } from "appwrite";
 import { Spinner } from "./components/Spinner";
+import { motion } from "framer-motion";
 
 export interface DataBaseProps {
   body: string;
@@ -23,6 +24,7 @@ function App() {
   const [message, setMessage] = useState<DataBaseProps[]>([]);
   const [messageBody, setMessageBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [deleteIsLoading, setDeleteIsLoading] = useState(false);
 
   const getMessage = async () => {
     const response: any = await database.listDocuments(
@@ -48,6 +50,18 @@ function App() {
       });
 
     setMessageBody("");
+  };
+
+  const deleteMessage = async (message_id: string) => {
+    setDeleteIsLoading(true);
+    const response = await database
+      .deleteDocument(DATABASE_ID, COLLECTION_ID_MESSAGE, message_id)
+      .then((res) => res)
+      .finally(() => {
+        setDeleteIsLoading(false);
+      });
+
+    console.log(response);
   };
 
   useEffect(() => {
@@ -90,10 +104,34 @@ function App() {
                 <div>
                   <p>{message.$createdAt}</p>
                 </div>
-                <div>
+                <div className="flex items-center justify-between">
                   <span className="bg-pink-600 rounded-3xl px-4 py-2">
                     {message.body}
                   </span>
+
+                  <motion.div
+                    onClick={() => deleteMessage(message.$id)}
+                    className="cursor-pointer w-6 h-6 bg-pink-600 rounded-full flex items-center justify-center"
+                    animate={
+                      deleteIsLoading ? { y: [-10, 0, -10] } : { y: [0, 0, 0] }
+                    }
+                    transition={{
+                      duration: 1,
+                      repeat: deleteIsLoading ? Infinity : 0,
+                      ease: "linear",
+                    }}
+                  >
+                    X
+                  </motion.div>
+
+                  {/* <motion.div
+                    transition={{ ease: "linear", duration: 0.8 }}
+                    onTransitionEnd={!isLoading}
+                    className="bg-gray-700 text-white rounded-full h-6 w-6 flex items-center justify-center mx-10"
+                    onClick={() => deleteMessage(message.$id)}
+                  >
+                    x
+                  </motion.div> */}
                 </div>
               </div>
             );
