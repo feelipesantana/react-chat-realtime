@@ -1,9 +1,12 @@
 export function Spinner() {
   return (
-    <div role="status">
+    <div
+      role="status"
+      className="flex justify-center items-center h-screen h-screen bg-gray-950"
+    >
       <svg
         aria-hidden="true"
-        className="w-4 h-4 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+        className="w-20 h-20 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
