@@ -6,7 +6,7 @@ import { AuthProvider } from "./utils/AuthContext";
 
 function App() {
   return (
-    <>
+    <div className="bg-gray-950">
       <Router>
         <AuthProvider>
           <Routes>
@@ -17,7 +17,7 @@ function App() {
           </Routes>
         </AuthProvider>
       </Router>
-    </>
+    </div>
   );
 }
 

@@ -4,12 +4,29 @@ import { account } from "../services/appWriteConfig";
 import { useNavigate } from "react-router-dom";
 import { Models } from "appwrite";
 
-const AuthContext = createContext();
+interface AuthContextProps {
+  user: Models.Preferences | null;
+  handleLogin: (
+    e: React.FormEvent<HTMLFormElement>,
+    credentials: CredentialsProps
+  ) => Promise<void>;
+  handleUserLogout: () => void;
 
+  isLoading: boolean;
+}
 interface CredentialsProps {
   email: string;
   password: string;
 }
+
+const initialAuthContext: AuthContextProps = {
+  user: null,
+  handleLogin: async () => {},
+  handleUserLogout: () => {},
+};
+
+const AuthContext = createContext<AuthContextProps>(initialAuthContext);
+
 export const AuthProvider = ({ children }: any) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<Models.Preferences | null>(null);
@@ -29,9 +46,14 @@ export const AuthProvider = ({ children }: any) => {
     setIsLoading(false);
   };
 
-  async function handleLogin(e: any, credentials: CredentialsProps) {
+  async function handleLogin(
+    e: React.FormEvent<HTMLFormElement>,
+    credentials: CredentialsProps
+  ) {
     e.preventDefault();
     try {
+      setIsLoading(true);
+
       const promise = await account.createEmailSession(
         credentials.email,
         credentials.password
@@ -39,20 +61,24 @@ export const AuthProvider = ({ children }: any) => {
       const accountDetails = await account.get();
 
       if (promise) {
+        setIsLoading(false);
         setUser(accountDetails);
         navigate("/room");
       }
-      console.log(promise);
     } catch (err) {
       console.error(err);
     }
-
-    console.log(promise);
   }
 
+  async function handleUserLogout() {
+    account.deleteSession("current");
+    setUser(null);
+  }
   const contextData = {
     user,
     handleLogin,
+    handleUserLogout,
+    isLoading,
   };
   return (
     <AuthContext.Provider value={contextData}>

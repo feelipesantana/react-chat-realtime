@@ -8,6 +8,8 @@ import client, {
 import { format } from "date-fns";
 import { Trash2 } from "lucide-react";
 import { Spinner } from "../components/Spinner";
+import { Header } from "../components/Haeder";
+import { useAuth } from "../utils/AuthContext";
 
 export interface DataBaseProps {
   body: string;
@@ -20,23 +22,28 @@ export interface DataBaseProps {
   $databaseId: string;
   $collectionId: string;
 }
+
 export default function Room() {
   const [message, setMessage] = useState<DataBaseProps[]>([]);
   const [messageBody, setMessageBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  const { user } = useAuth();
   const getMessage = async () => {
     const response: any = await database.listDocuments(
       DATABASE_ID,
       COLLECTION_ID_MESSAGE,
       [Query.orderDesc("$createdAt"), Query.limit(10)]
     );
+
+    console.log("DOCUMENTOS", response.documents);
     setMessage(response.documents);
   };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     const payload = {
+      userId: user.$id,
+      username: user.name,
       body: messageBody,
     };
 
@@ -64,40 +71,40 @@ export default function Room() {
     getMessage();
 
     //Subscribe to files channel
-    client.subscribe(
-      `databases.${DATABASE_ID}.collections.${COLLECTION_ID_MESSAGE}.documents`,
-      (response) => {
-        if (
-          response.events.includes(
-            "databases.*.collections.*.documents.*.create"
-          )
-        ) {
-          console.log("A MESSAGE CREATED");
-          setMessage((prevState: any) => [response.payload, ...prevState]);
-        }
-        if (
-          response.events.includes(
-            "databases.*.collections.*.documents.*.delete"
-          )
-        ) {
-          console.log("A MESSAGE DELETED");
-          setMessage((prevState: any) =>
-            prevState.filter(
-              (message: any) => message.$id !== response.payload.$id
+    const unsubscribe = () =>
+      client.subscribe(
+        `databases.${DATABASE_ID}.collections.${COLLECTION_ID_MESSAGE}.documents`,
+        (response) => {
+          if (
+            response.events.includes(
+              "databases.*.collections.*.documents.*.create"
             )
-          );
+          ) {
+            console.log("A MESSAGE CREATED", response.payload);
+            setMessage((prevState) => [response.payload, ...prevState]);
+          }
+          if (
+            response.events.includes(
+              "databases.*.collections.*.documents.*.delete"
+            )
+          ) {
+            console.log("A MESSAGE DELETED");
+            setMessage((prevState) =>
+              prevState.filter((value) => value.$id !== response.payload.$id)
+            );
+          }
         }
-      }
-    );
+      );
 
-    // return () => {
-    //   unsubscribe();
-    // };
+    return () => {
+      unsubscribe();
+    };
   }, []);
   return (
-    <main className="bg-gray-950 h-screen w-screen  flex items-center justify-center text-pink-100">
-      <div
-        className={` p-10 max-w-[40rem] w-full h-[40rem] rounded-b-2xl  border border-white/10 bg-gray-900 transition duration-150 hover:bg-gray-800`}
+    <div className="flex flex-col h-screen w-screen items-center justify-center text-pink-100 max-w-[40rem] mx-auto ">
+      <Header />
+      <main
+        className={` p-10  w-full h-[40rem] rounded-b-2xl  border border-white/10 bg-gray-900 transition duration-150 hover:bg-gray-800`}
       >
         <form className="mb-10" onSubmit={handleSubmit}>
           <div>
@@ -108,13 +115,13 @@ export default function Room() {
               placeholder="Say something..."
               onChange={(e) => setMessageBody(e.target.value)}
               value={messageBody}
-              className="w-full text-gray-950 rounded-lg p-2"
+              className="w-full  rounded-lg p-2 border-0 h-10 bg-gray-700 text-white text-md outline-none"
             ></textarea>
           </div>
           <div className=" flex justify-end">
             <button
               type="submit"
-              className={`bg-blue-300 text-gray-950 px-2 py-1 rounded-lg flex items-center gap-2`}
+              className={`bg-blue-300 text-gray-950 px-2 py-1 rounded-lg flex items-center gap-2 mt-3 transition duration-150 hover:brightness-75`}
             >
               <span>Send</span>
               {isLoading && <Spinner />}
@@ -124,19 +131,26 @@ export default function Room() {
         <div className={` max-h-[26rem] h-full overflow-y-auto`}>
           {message?.map((message) => {
             return (
-              <div
-                key={message.$createdAt}
-                className="flex flex-col gap-4 mb-10"
-              >
+              <div key={message.$id} className="flex flex-col gap-2 mb-10">
                 <div>
-                  <p>{format(message.$createdAt, "dd/MM/yyyy HH:mm")}</p>
+                  <p className="flex gap-10">
+                    <span>
+                      {message.username ? message.username : "Anonymous user"}
+                    </span>
+                    <span>
+                      {format(message.$createdAt, "dd/MM/yyyy HH:mm")}
+                    </span>
+                  </p>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between">
                   <span className="bg-pink-600 rounded-3xl px-4 py-2">
                     {message.body}
                   </span>
 
-                  <button onClick={() => deleteMessage(message.$id)}>
+                  <button
+                    onClick={() => deleteMessage(message.$id)}
+                    className="p-2"
+                  >
                     <Trash2 className="text-white w-6 h-6 transition duration-150 hover:text-pink-600 " />
                   </button>
 
@@ -153,7 +167,7 @@ export default function Room() {
             );
           })}
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
